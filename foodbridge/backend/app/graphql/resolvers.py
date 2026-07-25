@@ -90,7 +90,7 @@ class Mutation:
             **donation_dict,
             "status": "processing",
             "assignedNGO": None,
-            "ngoEmail": None,
+            "ngoEmail": input.ngoEmail or None,
             "aiReason": None,
             "emailSubject": None,
             "emailBody": None,
@@ -121,11 +121,13 @@ class Mutation:
         ngo_email = None
         ngo_name = None
 
-        # Email sending ONLY happens after the LangGraph workflow completes successfully
-        if status == "accepted" and selected_ngo:
-            ngo_name = selected_ngo["name"]
-            ngo_email = selected_ngo["email"]
-            email_sent = send_email(ngo_email, email_subject, email_body)
+        # Email sending happens after the workflow completes successfully.
+        # If the user supplied an NGO email in the form, it is used as the recipient override.
+        if status == "accepted":
+            ngo_name = (input.ngoName or "").strip() or (selected_ngo["name"] if selected_ngo else None)
+            ngo_email = (input.ngoEmail or "").strip() or (selected_ngo["email"] if selected_ngo else None)
+            if ngo_email:
+                email_sent = send_email(ngo_email, email_subject, email_body)
 
         update_fields = {
             "status": status,
@@ -139,9 +141,19 @@ class Mutation:
         await donations_collection().update_one({"_id": donation_id}, {"$set": update_fields})
 
         final_doc = await donations_collection().find_one({"_id": donation_id})
+        if status == "accepted" and not email_sent:
+            message = "Donation accepted, but the NGO email could not be sent."
+            success = False
+        elif status == "accepted":
+            message = "Donation accepted and NGO notified."
+            success = True
+        else:
+            message = f"Donation rejected: {reason}"
+            success = False
+
         return DonationResult(
-            success=(status == "accepted"),
-            message="Donation accepted and NGO notified." if status == "accepted" else f"Donation rejected: {reason}",
+            success=success,
+            message=message,
             donation=_donation_doc_to_type(final_doc),
         )
 

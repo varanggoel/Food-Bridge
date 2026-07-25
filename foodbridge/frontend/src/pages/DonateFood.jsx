@@ -83,7 +83,13 @@ export default function DonateFood() {
         }
       }
 
-      const inputPayload = { ...form, restaurantEmail, quantity: parseFloat(form.quantity) };
+      const inputPayload = {
+        ...form,
+        restaurantEmail,
+        quantity: parseFloat(form.quantity),
+        ngoEmail: ngoForm.email?.trim() || null,
+        ngoName: ngoForm.name?.trim() || null,
+      };
 
       const { data } = await createDonation({ variables: { input: inputPayload } });
       setResult(data.createDonation);
@@ -91,7 +97,10 @@ export default function DonateFood() {
         setForm(EMPTY_FORM);
       }
     } catch (err) {
-      setResult({ success: false, message: err.message });
+      const message = err?.graphQLErrors?.[0]?.message || err?.networkError?.message || err?.message || "Unable to submit donation right now.";
+      setResult({ success: false, message: message.includes("fetch") || message.includes("Failed to fetch")
+        ? "Unable to reach the backend. Please make sure the backend server is running and try again."
+        : message });
     }
   };
 

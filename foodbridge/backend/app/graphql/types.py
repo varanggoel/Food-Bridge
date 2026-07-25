@@ -52,6 +52,8 @@ class DonationInput:
     pickupAddress: str
     city: str
     notes: Optional[str] = None
+    ngoEmail: Optional[str] = None
+    ngoName: Optional[str] = None
 
 
 @strawberry.type

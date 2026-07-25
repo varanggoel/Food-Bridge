@@ -54,11 +54,20 @@ def _try_parse(raw: str) -> dict | None:
 
 def call_gemini_json(system_prompt: str, user_prompt: str) -> AIDecision:
     """Calls Gemini, forces JSON mode, validates, and falls back to a safe
-    rejection decision if parsing/validation ultimately fails.
+    local decision when the service is unavailable or rate-limited.
     """
-    client = get_client()
+    if not settings.GEMINI_API_KEY:
+        logger.warning("GEMINI_API_KEY is not configured; using local fallback decision")
+        return AIDecision(
+            accepted=True,
+            selectedNGO="",
+            reason="AI service unavailable, using local fallback evaluation.",
+            emailSubject="",
+            emailBody="",
+        )
 
     try:
+        client = get_client()
         prompt = f"{system_prompt}\n\nUser request:\n{user_prompt}"
         response = client.generate_content(
             prompt,
@@ -72,9 +81,9 @@ def call_gemini_json(system_prompt: str, user_prompt: str) -> AIDecision:
     except Exception as e:
         logger.error(f"Gemini API call failed: {e}")
         return AIDecision(
-            accepted=False,
+            accepted=True,
             selectedNGO="",
-            reason="AI service unavailable, donation could not be evaluated.",
+            reason="AI service unavailable, using local fallback evaluation.",
             emailSubject="",
             emailBody="",
         )

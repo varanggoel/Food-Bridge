@@ -3,8 +3,8 @@ services:
     name: foodbridge-backend
     runtime: python
     rootDir: foodbridge/backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    buildCommand: cd foodbridge/backend && pip install -r requirements.txt
+    startCommand: cd foodbridge/backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: MONGODB_URI
         sync: false

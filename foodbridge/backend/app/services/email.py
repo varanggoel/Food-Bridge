@@ -1,4 +1,5 @@
-"""Real email sending via Gmail SMTP (smtplib), SSL on port 465."""
+"""Real email sending via SMTP with Gmail-compatible settings."""
+import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -9,26 +10,33 @@ logger = get_logger(__name__)
 
 def send_email(to_email: str, subject: str, body: str) -> bool:
     """Sends a plain-text email. Returns True on success, False on failure."""
-    if not settings.EMAIL_USER or not settings.EMAIL_PASSWORD:
-        logger.error("EMAIL_USER / EMAIL_PASSWORD not configured")
-        return False
-
-    if not to_email:
+    recipient = (to_email or "").strip()
+    if not recipient:
         logger.error("No recipient email provided")
         return False
 
+    username = (settings.EMAIL_USER or os.getenv("SMTP_USERNAME", "") or os.getenv("EMAIL_HOST_USER", "")).strip()
+    password = (settings.EMAIL_PASSWORD or os.getenv("SMTP_PASSWORD", "") or os.getenv("EMAIL_HOST_PASSWORD", "")).strip()
+    if not username or not password:
+        logger.error("SMTP credentials not configured")
+        return False
+
+    smtp_server = (os.getenv("SMTP_SERVER") or settings.SMTP_SERVER or "smtp.gmail.com").strip()
+    smtp_port = int(os.getenv("SMTP_PORT", settings.SMTP_PORT or 465))
+    from_email = (os.getenv("EMAIL_FROM") or username).strip()
+
     msg = MIMEMultipart()
-    msg["From"] = settings.EMAIL_USER
-    msg["To"] = to_email
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain"))
+    msg["From"] = from_email
+    msg["To"] = recipient
+    msg["Subject"] = subject or "FoodBridge India Donation Notification"
+    msg.attach(MIMEText(body or "", "plain"))
 
     try:
-        with smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=15) as server:
-            server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
-            server.sendmail(settings.EMAIL_USER, to_email, msg.as_string())
-        logger.info(f"Email sent successfully to {to_email}")
+        with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=15) as server:
+            server.login(username, password)
+            server.sendmail(from_email, recipient, msg.as_string())
+        logger.info(f"Email sent successfully to {recipient}")
         return True
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {e}")
+        logger.error(f"Failed to send email to {recipient}: {e}")
         return False
