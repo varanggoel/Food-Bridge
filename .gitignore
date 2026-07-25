@@ -40,14 +40,6 @@ dist/
 .DS_Store
 Thumbs.db
 
-# ========================
-# AI / Agent Tools (Antigravity, Copilot, etc.)
-# ========================
-.gemini/
-.agents/
-.copilot/
-.github/copilot/
-copilot-*.md
 
 # ========================
 # OS Files
